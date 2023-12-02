@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS payment (
     CONSTRAINT fk_payment_belongs_to_order FOREIGN KEY (transaction) REFERENCES orders(order_uid),
     CONSTRAINT ch_amount_not_negative CHECK ( amount >= 0 ),
     CONSTRAINT ch_delivery_cost_not_negative CHECK ( delivery_cost >= 0 ),
-    CONSTRAINT ch_goods_total_not_negative CHECK ( goods_total >= 0 ),
+    CONSTRAINT ch_goods_total_positive CHECK ( goods_total > 0 ),
     CONSTRAINT ch_custom_fee_not_negative CHECK ( custom_fee >= 0 )
     );
 
