@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"io"
+	"os"
 
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker/stan"
@@ -39,6 +40,4 @@ func main() {
 	if err := client.Publish(subject, []byte("Hello, NATS Streaming!")); err != nil {
 		panic(err.Error())
 	}
-
-	time.Sleep(300 * time.Second)
 }
