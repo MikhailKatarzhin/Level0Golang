@@ -50,11 +50,17 @@ func main() {
 		for {
 			select {
 			case <-done:
+
 				if err := subs.Unsubscribe.Unsubscribe(); err != nil {
 					panic(err.Error())
 				}
+
 			case data := <-subs.Ch:
 				println(string(data.Body))
+
+				if err := data.AckCallback(); err != nil {
+					panic(err.Error())
+				}
 			}
 		}
 	}()
