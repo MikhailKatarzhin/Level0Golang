@@ -1,22 +1,14 @@
 services:
-  nats:
-    image: nats:latest
-    container_name: nats
-    ports:
-      - 4222:4222
-      - 8222:8222
-    volumes:
-      - ./nats:/config
-    command:
-      - "--config"
-      - config/nats-server.conf
-
   stan:
     command:
       - "--cluster_id"
       - wbl0ns
+      - "--user"
+      - wbl0user
+      - "--pass"
+      - wbl0pass
     image: nats-streaming:latest
     restart: always
     container_name: nats-streaming
     ports:
-      - 4223:4223
+      - 4222:4222

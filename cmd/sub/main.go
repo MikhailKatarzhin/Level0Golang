@@ -11,11 +11,12 @@ import (
 )
 
 const (
-	addr    = "localhost:4223"
+	addr    = "localhost:4222"
 	CID     = "clientID"
+	clstrID = "wbl0ns"
 	consmr  = "testConsumer"
-	user    = "suber"
-	pass    = "rebus"
+	user    = "wbl0user"
+	pass    = "wbl0pass"
 	subject = "testing"
 )
 
@@ -26,7 +27,7 @@ func main() {
 		Password: pass,
 	})
 
-	if err := client.Connect("wbl0ns", fmt.Sprint(CID, "-", gonanoid.Must(5))); err != nil {
+	if err := client.Connect(clstrID, fmt.Sprint(CID, "-", gonanoid.Must(5))); err != nil {
 		panic(err.Error())
 	}
 
@@ -58,5 +59,5 @@ func main() {
 		}
 	}()
 
-	time.Sleep(300 * time.Second)
+	time.Sleep(30 * time.Minute)
 }
