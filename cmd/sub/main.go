@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/MikhailKatarzhin/Level0Golang/internal/database/postgre"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker/stan"
 
@@ -21,6 +22,15 @@ const (
 )
 
 func main() {
+
+	pgConnPool, err := postgre.DefaultCredConfig()
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer pgConnPool.Close()
+
 	client := stan.New(broker.NATSConfig{
 		Addr:     addr,
 		User:     user,
