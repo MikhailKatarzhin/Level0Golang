@@ -1,6 +1,8 @@
 package order
 
-import "time"
+import (
+	"time"
+)
 
 type Order struct {
 	OrderUID          string    `json:"order_uid" validate:"required,max=50"`
