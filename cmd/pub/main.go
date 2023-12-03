@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker/stan"
@@ -39,21 +40,38 @@ func main() {
 	}(client)
 
 	// Чтение файла JSON
-	data, err := os.Open(jsonF)
+	file, err := os.Open(jsonF)
 
 	if err != nil {
 		panic(err.Error())
 	}
 
-	defer func(data *os.File) {
-		if err = data.Close(); err != nil {
+	defer func(file *os.File) {
+		if err = file.Close(); err != nil {
 			panic(err.Error())
 		}
-	}(data)
+	}(file)
 
-	byteData, _ := io.ReadAll(data)
+	byteData, _ := io.ReadAll(file)
 
-	if err := client.Publish(subject, byteData); err != nil {
+	fileString := string(byteData[:])
+
+	fileString = TrimJsonFileString(fileString)
+
+	if err := client.Publish(subject, []byte(fileString)); err != nil {
 		panic(err.Error())
 	}
+}
+
+func TrimJsonFileString(jsonFileString string) string {
+
+	trimedString := strings.ReplaceAll(jsonFileString, "\r", "")
+	trimedString = strings.ReplaceAll(trimedString, "\n", "")
+
+	//Non-necessary for unmarshal, but it shorted string -> less length -> compact upload
+	trimedString = strings.ReplaceAll(trimedString, "      ", " ")
+	trimedString = strings.ReplaceAll(trimedString, "    ", " ")
+	trimedString = strings.ReplaceAll(trimedString, "  ", " ")
+
+	return trimedString
 }
