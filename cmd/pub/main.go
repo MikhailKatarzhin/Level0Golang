@@ -39,11 +39,23 @@ func main() {
 		}
 	}(client)
 
-	// Чтение файла JSON
+	byteData, err := readJsonFromFile()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	//TODO check JSON with JSON schema
+
+	if err := client.Publish(subject, byteData); err != nil {
+		panic(err.Error())
+	}
+}
+
+func readJsonFromFile() ([]byte, error) {
 	file, err := os.Open(jsonF)
 
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
 
 	defer func(file *os.File) {
@@ -58,9 +70,7 @@ func main() {
 
 	fileString = TrimJsonFileString(fileString)
 
-	if err := client.Publish(subject, []byte(fileString)); err != nil {
-		panic(err.Error())
-	}
+	return []byte(fileString), nil
 }
 
 func TrimJsonFileString(jsonFileString string) string {
