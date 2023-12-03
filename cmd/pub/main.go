@@ -15,6 +15,7 @@ const (
 	addr    = "localhost:4222"
 	CID     = "clientID"
 	clstrID = "wbl0ns"
+	jsonF   = "cmd/pub/test.json"
 	user    = "wbl0user"
 	pass    = "wbl0pass"
 	subject = "testing"
@@ -37,7 +38,22 @@ func main() {
 		}
 	}(client)
 
-	if err := client.Publish(subject, []byte("Hello, NATS Streaming!")); err != nil {
+	// Чтение файла JSON
+	data, err := os.Open(jsonF)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	defer func(data *os.File) {
+		if err = data.Close(); err != nil {
+			panic(err.Error())
+		}
+	}(data)
+
+	byteData, _ := io.ReadAll(data)
+
+	if err := client.Publish(subject, byteData); err != nil {
 		panic(err.Error())
 	}
 }
