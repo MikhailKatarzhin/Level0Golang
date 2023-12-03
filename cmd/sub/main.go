@@ -7,6 +7,7 @@ import (
 	"github.com/MikhailKatarzhin/Level0Golang/internal/database/postgre"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker/stan"
+	"github.com/MikhailKatarzhin/Level0Golang/pkg/logger"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
@@ -30,6 +31,8 @@ func main() {
 	}
 
 	defer pgConnPool.Close()
+
+	logger.L().Info("Successfully connected to postgres")
 
 	client := stan.New(broker.NATSConfig{
 		Addr:     addr,
