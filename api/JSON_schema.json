@@ -10,7 +10,8 @@
       "properties": {
         "name": { "type": "string" },
         "phone": { "type": "string",
-          "pattern": "^\\+\\d{12,15}$"
+          "minLength": 12,
+          "maxLength": 15
         },
         "zip": { "type": "string" },
         "city": { "type": "string" },

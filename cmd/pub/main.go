@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -18,8 +19,8 @@ const (
 	addr    = "localhost:4222"
 	CID     = "clientID"
 	clstrID = "wbl0ns"
-	jsonF   = "cmd/pub/jsons/testFail.json"
-	jsonFSc = "file:///api/JSON_schema.json"
+	jsonF   = "cmd/pub/jsons/test.json"
+	jsonFSc = "./api/JSON_schema.json"
 	user    = "wbl0user"
 	pass    = "wbl0pass"
 	subject = "testing"
@@ -47,27 +48,13 @@ func main() {
 		panic(err.Error())
 	}
 
-	schemaLoader := gojsonschema.NewReferenceLoader(jsonFSc)
-	documentLoader := gojsonschema.NewStringLoader(string(byteData))
-
-	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
-	if err != nil {
-		panic(err.Error())
+	if err := validateJSON(byteData, jsonFSc); err != nil {
+		logger.L().Error(err.Error())
+		return
 	}
 
-	if result.Valid() {
-		fmt.Println("Correct data JSON")
-
-		if err := client.Publish(subject, byteData); err != nil {
-			logger.L().Error(err.Error())
-		}
-
-	} else {
-		fmt.Println("Incorrect data")
-
-		for _, desc := range result.Errors() {
-			fmt.Println(desc)
-		}
+	if err := client.Publish(subject, byteData); err != nil {
+		logger.L().Error(err.Error())
 	}
 }
 
@@ -104,4 +91,29 @@ func TrimJsonFileString(jsonFileString string) string {
 	trimedString = strings.ReplaceAll(trimedString, "  ", " ")
 
 	return trimedString
+}
+
+func validateJSON(jsonData []byte, schemaPath string) error {
+	schemaData, err := ioutil.ReadFile(schemaPath)
+	if err != nil {
+		return err
+	}
+
+	schemaLoader := gojsonschema.NewStringLoader(string(schemaData))
+	documentLoader := gojsonschema.NewStringLoader(string(jsonData))
+
+	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+	if err != nil {
+		return err
+	}
+
+	if !result.Valid() {
+		var errors string
+		for _, desc := range result.Errors() {
+			errors += fmt.Sprintf("- %s\n", desc)
+		}
+		return fmt.Errorf("JSON не соответствует схеме. Ошибки:\n%s", errors)
+	}
+
+	return nil
 }
