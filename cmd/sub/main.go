@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/MikhailKatarzhin/Level0Golang/internal/database/postgre"
-	//"github.com/MikhailKatarzhin/Level0Golang/internal/orderService"
+	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService"
 	//"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model"
 	//"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/repository"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
@@ -44,7 +44,7 @@ func main() {
 
 	jobQueue := make(chan []byte, 100)
 
-	worker.StartWorkerPool(10, jobQueue, pgConnPool)
+	orderService.StartWorkerPool(10, jobQueue, pgConnPool)
 
 	client := stan.New(broker.NATSConfig{
 		Addr:     addr,
