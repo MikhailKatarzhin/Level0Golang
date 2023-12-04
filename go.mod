@@ -9,6 +9,7 @@ require (
 	github.com/nats-io/nats.go v1.31.0
 	github.com/nats-io/stan.go v0.10.4
 	github.com/onsi/ginkgo/v2 v2.13.2
+	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/zap v1.26.0
 )
 
@@ -28,6 +29,8 @@ require (
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/nats-io/nkeys v0.4.5 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
+	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
+	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/net v0.17.0 // indirect

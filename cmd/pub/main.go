@@ -8,15 +8,18 @@ import (
 
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker/stan"
+	"github.com/MikhailKatarzhin/Level0Golang/pkg/logger"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
+	"github.com/xeipuuv/gojsonschema"
 )
 
 const (
 	addr    = "localhost:4222"
 	CID     = "clientID"
 	clstrID = "wbl0ns"
-	jsonF   = "cmd/pub/test.json"
+	jsonF   = "cmd/pub/jsons/testFail.json"
+	jsonFSc = "file:///api/JSON_schema.json"
 	user    = "wbl0user"
 	pass    = "wbl0pass"
 	subject = "testing"
@@ -44,10 +47,27 @@ func main() {
 		panic(err.Error())
 	}
 
-	//TODO check JSON with JSON schema
+	schemaLoader := gojsonschema.NewReferenceLoader(jsonFSc)
+	documentLoader := gojsonschema.NewStringLoader(string(byteData))
 
-	if err := client.Publish(subject, byteData); err != nil {
+	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+	if err != nil {
 		panic(err.Error())
+	}
+
+	if result.Valid() {
+		fmt.Println("Correct data JSON")
+
+		if err := client.Publish(subject, byteData); err != nil {
+			logger.L().Error(err.Error())
+		}
+
+	} else {
+		fmt.Println("Incorrect data")
+
+		for _, desc := range result.Errors() {
+			fmt.Println(desc)
+		}
 	}
 }
 
