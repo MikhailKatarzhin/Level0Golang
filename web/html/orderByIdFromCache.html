@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Order Details</title>
+</head>
+<body>
+<h1>Order Details</h1>
+<form id="orderForm">
+    <label for="orderId">Enter Order ID:</label>
+    <input type="text" id="orderId" name="orderId" required>
+    <button type="submit">Get Order Details</button>
+</form>
+<div id="orderDetails"></div>
+
+<script>
+    document.getElementById('orderForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const orderId = document.getElementById('orderId').value;
+
+        fetch('/orders/getCache/' + orderId)
+            .then(response => response.json())
+            .then(data => {
+                const orderDetailsElement = document.getElementById('orderDetails');
+                if (data.error) {
+                    orderDetailsElement.innerHTML = `<p>Error: ${data.error}</p>`;
+                } else {
+                    orderDetailsElement.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            })
+            .catch(error => {
+                const orderDetailsElement = document.getElementById('orderDetails');
+                orderDetailsElement.innerHTML = `<p>Error: ${error.message}</p>`;
+            });
+    });
+</script>
+</body>
+</html>

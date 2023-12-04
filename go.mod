@@ -3,6 +3,7 @@ module github.com/MikhailKatarzhin/Level0Golang
 go 1.21
 
 require (
+	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/nats-io/nats.go v1.31.0

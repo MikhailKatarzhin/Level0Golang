@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	cchr "github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/cache"
-	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/posgre"
-	"time"
 
 	"github.com/MikhailKatarzhin/Level0Golang/internal/database/postgre"
 	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService"
+	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/http"
+	cchr "github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/cache"
+	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/posgre"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker/stan"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/cache"
@@ -97,5 +97,6 @@ func main() {
 		}
 	}()
 
-	time.Sleep(30 * time.Minute)
+	server := http.NewServer(orderServ)
+	server.Start(":8080")
 }
