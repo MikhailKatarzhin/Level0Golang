@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	addr    = "localhost:4222"
+	addr    = "stan:4222"
 	CID     = "clientID"
 	clstrID = "wbl0ns"
 	consmr  = "testConsumer"
@@ -28,6 +28,8 @@ const (
 )
 
 func main() {
+
+	logger.L().Info("Я включился!")
 
 	pgConnPool, err := postgre.DefaultCredConfig()
 

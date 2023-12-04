@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	dbAddr = "localhost:5433"
+	dbAddr = "postgres"
 	dbName = "wbl0db"
 	dbPass = "Useriuswbl0db"
 	dbUser = "Userius"

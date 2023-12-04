@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:14.5
+    ports:
+      - "5432:5432"
+    container_name: postgres
+    environment:
+      POSTGRES_USER: "Userius"
+      POSTGRES_DB: "wbl0db"
+      POSTGRES_PASSWORD: "Useriuswbl0db"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Userius -d wbl0db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  stan:
+    command:
+      - "--cluster_id"
+      - wbl0ns
+      - "--user"
+      - wbl0user
+      - "--pass"
+      - wbl0pass
+    image: nats-streaming:latest
+    restart: always
+    container_name: nats-streaming
+    ports:
+      - 4222:4222
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      stan:
+        condition: service_started
+    container_name: server
+    entrypoint: ./main
+    ports:
+      - 8001:5432
+      - 8080:8080
