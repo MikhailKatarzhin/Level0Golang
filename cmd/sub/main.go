@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	cchr "github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/cache"
+	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/posgre"
 	"time"
 
 	"github.com/MikhailKatarzhin/Level0Golang/internal/database/postgre"
 	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService"
-	//"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model"
-	//"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/repository"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker/stan"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/cache"
@@ -39,16 +39,18 @@ func main() {
 
 	logger.L().Info("Successfully connected to postgres")
 
-	//orderServ := orderService.NewOrderService(repository.NewOrderRepository(pgConnPool))
-	//logger.L().Info("Successfully created repository and service for postgres")
-
-	//TODO pull orders from BD to cache
-
 	lruCache := cache.NewLRUCache[string, []byte](3600)
+	orderServ := orderService.NewOrderService(posgre.NewOrderRepository(pgConnPool), cchr.NewOrderRepository(lruCache))
+	logger.L().Info("Successfully created repositories and service for postgres")
+
+	err = orderServ.LoadAllOrdersToCacheFromBD()
+	if err != nil {
+		logger.L().Info(fmt.Sprintf("During loading orders BD to cache was errors:%s", err.Error()))
+	}
 
 	jobQueue := make(chan []byte, 100)
 
-	orderService.StartWorkerPool(nWorker, jobQueue, pgConnPool, lruCache)
+	orderService.StartWorkerPoolWithOrderService(nWorker, jobQueue, orderServ)
 
 	client := stan.New(broker.NATSConfig{
 		Addr:     addr,

@@ -108,11 +108,7 @@ func (osrv *OrderService) LoadAllOrdersToCacheFromBD() error {
 		osrv.InsertOrderToCache(order.OrderUID, orderByte)
 	}
 
-	if sumErr != nil {
-		return sumErr
-	}
-
-	return nil
+	return sumErr
 }
 
 func UnmarshalOrder(dataByte []byte) (model.Order, error) {
