@@ -2,6 +2,7 @@ package orderService
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model"
@@ -83,4 +84,54 @@ func (osrv *OrderService) InsertOrderToCache(orderUID string, data []byte) {
 
 func (osrv *OrderService) GetOrderByOrderUIDFromCache(orderUID string) ([]byte, bool) {
 	return osrv.CacheRepo.GetOrderByUID(orderUID)
+}
+
+func (osrv *OrderService) LoadAllOrdersFromBD() ([]model.Order, error) {
+	return osrv.PostgresRepo.GetAllOrders()
+}
+
+func (osrv *OrderService) LoadAllOrdersToCacheFromBD() error {
+	orders, err := osrv.LoadAllOrdersFromBD()
+	if err != nil {
+		return fmt.Errorf("error during loads all orders from BD: %s", err.Error())
+	}
+
+	var sumErr error
+
+	for i, order := range orders {
+		orderByte, err := MarshalOrder(order)
+		if err != nil {
+			sumErr = fmt.Errorf("error during marshal order[%d]: %s; ", i, sumErr.Error())
+			continue
+		}
+
+		osrv.InsertOrderToCache(order.OrderUID, orderByte)
+	}
+
+	if sumErr != nil {
+		return sumErr
+	}
+
+	return nil
+}
+
+func UnmarshalOrder(dataByte []byte) (model.Order, error) {
+	var newOrder model.Order
+	err := json.Unmarshal(dataByte, &newOrder)
+
+	if err != nil {
+		return newOrder, fmt.Errorf("error while unmarshalling message to order : %s", err.Error())
+	}
+
+	return newOrder, nil
+}
+
+func MarshalOrder(ordr model.Order) ([]byte, error) {
+	dataByte, err := json.Marshal(ordr)
+
+	if err != nil {
+		return dataByte, fmt.Errorf("error while marshalling order to databyte : %s", err.Error())
+	}
+
+	return dataByte, nil
 }

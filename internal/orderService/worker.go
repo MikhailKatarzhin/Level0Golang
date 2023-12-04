@@ -2,10 +2,8 @@ package orderService
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model"
 	cchr "github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/cache"
 	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/posgre"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/cache"
@@ -16,7 +14,10 @@ import (
 
 func StartWorkerPool(numWorkers int, jobQueue chan []byte, pgConnPool *pgxpool.Pool, cache *cache.LRUCache[string, []byte]) {
 	orderServ := NewOrderService(posgre.NewOrderRepository(pgConnPool), cchr.NewOrderRepository(cache))
+	StartWorkerPoolWithOrderService(numWorkers, jobQueue, orderServ)
+}
 
+func StartWorkerPoolWithOrderService(numWorkers int, jobQueue chan []byte, orderServ *OrderService) {
 	for i := 0; i < numWorkers; i++ {
 		go work(i, jobQueue, orderServ)
 	}
@@ -69,32 +70,9 @@ func work(workerID int, jobQueue chan []byte, orderServ *OrderService) {
 }
 
 func setToCache(orderUID string, data []byte, workerID int, orderServ *OrderService) {
-	orderServ.CacheRepo.InsertOrder(orderUID, data)
+	orderServ.InsertOrderToCache(orderUID, data)
 	logger.L().Info(fmt.Sprintf("[%d]Successful insert order[uid:%s] to cache",
 		workerID,
 		orderUID,
 	))
-}
-
-func UnmarshalOrder(dataByte []byte) (model.Order, error) {
-	var newOrder model.Order
-	err := json.Unmarshal(dataByte, &newOrder)
-
-	if err != nil {
-		logger.L().Error(fmt.Sprintf("error while unmarshalling message to order : %s", err.Error()))
-		return newOrder, err
-	}
-
-	return newOrder, nil
-}
-
-func MarshalOrder(ordr model.Order) ([]byte, error) {
-	dataByte, err := json.Marshal(ordr)
-
-	if err != nil {
-		logger.L().Error(fmt.Sprintf("error while marshalling order to databyte : %s", err.Error()))
-		return dataByte, err
-	}
-
-	return dataByte, nil
 }

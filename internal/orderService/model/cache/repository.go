@@ -19,9 +19,3 @@ func (repo *Repository) InsertOrder(orderUID string, data []byte) {
 func (repo *Repository) GetOrderByUID(orderUID string) ([]byte, bool) {
 	return repo.CacheLRU.Get(orderUID)
 }
-
-//func (repo *Repository) GetAllOrders() ([]model.Order, error) {
-//	var orders []model.Order
-//
-//	return orders, nil
-//}
