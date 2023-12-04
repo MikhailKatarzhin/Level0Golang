@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService"
@@ -22,8 +23,7 @@ func (oh *OrderHandlers) GetOrderFromCacheHandler(w http.ResponseWriter, r *http
 
 	orderData, exists := oh.orderService.GetOrderByOrderUIDFromCache(orderID)
 	if !exists {
-		http.Error(w, "Order not found in cache", http.StatusNotFound)
-		return
+		orderData, _ = json.Marshal("Order not found in cache")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -34,15 +34,15 @@ func (oh *OrderHandlers) GetOrderFromCacheHandler(w http.ResponseWriter, r *http
 func (oh *OrderHandlers) GetOrderFromBDHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	orderID := params["id"]
+	var orderData []byte
 
 	order, err := oh.orderService.GetOrderByOrderUIDFromBD(orderID)
 	if err != nil {
-		http.Error(w, "Order not found in BD", http.StatusNotFound)
-		return
+		orderData, _ = json.Marshal("Order not found in cache")
+	} else {
+		orderData, _ = orderService.MarshalOrder(order)
+		oh.orderService.InsertOrderToCache(orderID, orderData)
 	}
-
-	orderData, _ := orderService.MarshalOrder(order)
-	oh.orderService.InsertOrderToCache(orderID, orderData)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -57,12 +57,11 @@ func (oh *OrderHandlers) GetOrderHandler(w http.ResponseWriter, r *http.Request)
 	if !exists {
 		order, err := oh.orderService.GetOrderByOrderUIDFromBD(orderID)
 		if err != nil {
-			http.Error(w, "Order not found in BD or Cache", http.StatusNotFound)
-			return
+			orderData, _ = json.Marshal("Order not found in BD or Cache")
+		} else {
+			orderData, _ := orderService.MarshalOrder(order)
+			oh.orderService.InsertOrderToCache(orderID, orderData)
 		}
-
-		orderData, _ := orderService.MarshalOrder(order)
-		oh.orderService.InsertOrderToCache(orderID, orderData)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
