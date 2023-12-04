@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/MikhailKatarzhin/Level0Golang/internal/database/postgre/repository"
+	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService"
+	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model"
+	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/repository"
 	"time"
 
 	"github.com/MikhailKatarzhin/Level0Golang/internal/database/postgre"
-	"github.com/MikhailKatarzhin/Level0Golang/internal/order"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker/stan"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/logger"
@@ -37,8 +38,8 @@ func main() {
 
 	logger.L().Info("Successfully connected to postgres")
 
-	orderRepo := repository.NewOrderRepository(pgConnPool)
-	logger.L().Info("Successfully created repository for postgres")
+	orderServ := orderService.NewOrderService(repository.NewOrderRepository(pgConnPool))
+	logger.L().Info("Successfully created repository and service for postgres")
 
 	//TODO pull orders from BD to cache
 
@@ -91,7 +92,7 @@ func main() {
 
 				logger.L().Info(fmt.Sprintf("Received STAN order: [uid]%s", receivedOrder.OrderUID))
 
-				if err := orderRepo.InsertOrderToDB(receivedOrder); err != nil {
+				if err := orderServ.InsertOrderToDB(receivedOrder); err != nil {
 					logger.L().Error(fmt.Sprintf(
 						"Failed to insert order[uid:%s] to DB: %s",
 						receivedOrder.OrderUID,
@@ -100,18 +101,6 @@ func main() {
 				} else {
 					logger.L().Info(fmt.Sprintf("Successful insert order[uid:%s] to BD", receivedOrder.OrderUID))
 				}
-
-				orderFromBD, err := orderRepo.GetOrderByUID(receivedOrder.OrderUID)
-				if err != nil {
-					println(err.Error())
-				}
-
-				newJson, err := MarshalOrder(orderFromBD)
-				if err != nil {
-					println(err.Error())
-				}
-
-				println(newJson)
 				//TODO insert received and uploaded order into cache
 			}
 		}
@@ -120,8 +109,8 @@ func main() {
 	time.Sleep(30 * time.Minute)
 }
 
-func UnmarshalOrder(dataByte []byte) (order.Order, error) {
-	var newOrder order.Order
+func UnmarshalOrder(dataByte []byte) (model.Order, error) {
+	var newOrder model.Order
 	err := json.Unmarshal(dataByte, &newOrder)
 
 	if err != nil {
@@ -132,7 +121,7 @@ func UnmarshalOrder(dataByte []byte) (order.Order, error) {
 	return newOrder, nil
 }
 
-func MarshalOrder(ordr order.Order) ([]byte, error) {
+func MarshalOrder(ordr model.Order) ([]byte, error) {
 	dataByte, err := json.Marshal(ordr)
 
 	if err != nil {

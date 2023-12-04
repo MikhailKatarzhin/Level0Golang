@@ -2,69 +2,25 @@ package repository
 
 import (
 	"context"
-
-	"github.com/MikhailKatarzhin/Level0Golang/internal/order"
+	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type OrderRepository struct {
-	pgConnPool *pgxpool.Pool
+	PgConnPool *pgxpool.Pool
 }
 
 func NewOrderRepository(pgConnPool *pgxpool.Pool) *OrderRepository {
-	return &OrderRepository{pgConnPool: pgConnPool}
+	return &OrderRepository{PgConnPool: pgConnPool}
 }
 
-func (repo *OrderRepository) InsertOrderToDB(newOrder order.Order) error {
-	tx, err := repo.pgConnPool.Begin(context.Background())
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback(context.Background())
-			panic(p)
-		}
-	}()
-
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback(context.Background())
-		}
-	}()
-
-	if err := repo.InsertOrder(newOrder); err != nil {
-		return err
-	}
-
-	if err := repo.InsertDelivery(newOrder); err != nil {
-		return err
-	}
-
-	if err := repo.InsertPayment(newOrder); err != nil {
-		return err
-	}
-
-	for _, item := range newOrder.Items {
-		if err := repo.InsertItem(item); err != nil {
-			return err
-		}
-	}
-
-	if err = tx.Commit(context.Background()); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (repo *OrderRepository) InsertOrder(newOrder order.Order) error {
+func (repo *OrderRepository) InsertOrder(ctx context.Context, newOrder model.Order) error {
 	query := `
 		INSERT INTO orders (order_uid, track_number, entry, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
-	_, err := repo.pgConnPool.Exec(context.Background(), query,
+	_, err := repo.PgConnPool.Exec(ctx, query,
 		newOrder.OrderUID,
 		newOrder.TrackNumber,
 		newOrder.Entry,
@@ -81,12 +37,12 @@ func (repo *OrderRepository) InsertOrder(newOrder order.Order) error {
 	return err
 }
 
-func (repo *OrderRepository) InsertDelivery(newOrder order.Order) error {
+func (repo *OrderRepository) InsertDelivery(ctx context.Context, newOrder model.Order) error {
 	query := `
 		INSERT INTO delivery (order_uid, name, phone, zip, city, address, region, email )
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	_, err := repo.pgConnPool.Exec(context.Background(), query,
+	_, err := repo.PgConnPool.Exec(ctx, query,
 		newOrder.OrderUID,
 		newOrder.Delivery.Name,
 		newOrder.Delivery.Phone,
@@ -100,12 +56,12 @@ func (repo *OrderRepository) InsertDelivery(newOrder order.Order) error {
 	return err
 }
 
-func (repo *OrderRepository) InsertPayment(newOrder order.Order) error {
+func (repo *OrderRepository) InsertPayment(ctx context.Context, newOrder model.Order) error {
 	query := `
 		INSERT INTO payment (transaction, request_id, currency, provider, amount, payment_dt, bank, delivery_cost, goods_total, custom_fee)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
-	_, err := repo.pgConnPool.Exec(context.Background(), query,
+	_, err := repo.PgConnPool.Exec(ctx, query,
 		newOrder.Payment.Transaction,
 		newOrder.Payment.RequestId,
 		newOrder.Payment.Currency,
@@ -121,12 +77,12 @@ func (repo *OrderRepository) InsertPayment(newOrder order.Order) error {
 	return err
 }
 
-func (repo *OrderRepository) InsertItem(newItem order.Item) error {
+func (repo *OrderRepository) InsertItem(ctx context.Context, newItem model.Item) error {
 	query := `
 		INSERT INTO items (chrt_id, track_number, price, rid, name, sale, size, total_price, nm_id, brand, status)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
-	_, err := repo.pgConnPool.Exec(context.Background(), query,
+	_, err := repo.PgConnPool.Exec(ctx, query,
 		newItem.ChrtId,
 		newItem.TrackNumber,
 		newItem.Price,
@@ -143,8 +99,8 @@ func (repo *OrderRepository) InsertItem(newItem order.Item) error {
 	return err
 }
 
-func (repo *OrderRepository) GetOrderByUID(orderUID string) (order.Order, error) {
-	var ordr order.Order
+func (repo *OrderRepository) GetOrderByUID(orderUID string) (model.Order, error) {
+	var ordr model.Order
 
 	orderQuery := `
 		SELECT order_uid, track_number, entry, locale, internal_signature, 
@@ -152,7 +108,7 @@ func (repo *OrderRepository) GetOrderByUID(orderUID string) (order.Order, error)
 		FROM orders 
 		WHERE order_uid = $1
 	`
-	row := repo.pgConnPool.QueryRow(context.Background(), orderQuery, orderUID)
+	row := repo.PgConnPool.QueryRow(context.Background(), orderQuery, orderUID)
 	err := row.Scan(
 		&ordr.OrderUID,
 		&ordr.TrackNumber,
@@ -175,7 +131,7 @@ func (repo *OrderRepository) GetOrderByUID(orderUID string) (order.Order, error)
 		FROM delivery
 		WHERE order_uid = $1
 	`
-	row = repo.pgConnPool.QueryRow(context.Background(), deliveryQuery, orderUID)
+	row = repo.PgConnPool.QueryRow(context.Background(), deliveryQuery, orderUID)
 	err = row.Scan(
 
 		&ordr.Delivery.Name,
@@ -196,7 +152,7 @@ func (repo *OrderRepository) GetOrderByUID(orderUID string) (order.Order, error)
 		FROM payment
 		WHERE transaction = $1
 	`
-	row = repo.pgConnPool.QueryRow(context.Background(), paymentQuery, orderUID)
+	row = repo.PgConnPool.QueryRow(context.Background(), paymentQuery, orderUID)
 	err = row.Scan(
 		&ordr.Payment.Transaction,
 		&ordr.Payment.RequestId,
@@ -219,14 +175,14 @@ func (repo *OrderRepository) GetOrderByUID(orderUID string) (order.Order, error)
 		FROM items
 		WHERE track_number = $1
 	`
-	rows, err := repo.pgConnPool.Query(context.Background(), itemsQuery, ordr.TrackNumber)
+	rows, err := repo.PgConnPool.Query(context.Background(), itemsQuery, ordr.TrackNumber)
 	if err != nil {
 		return ordr, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var item order.Item
+		var item model.Item
 		err := rows.Scan(
 			&item.ChrtId,
 			&item.TrackNumber,
@@ -249,4 +205,44 @@ func (repo *OrderRepository) GetOrderByUID(orderUID string) (order.Order, error)
 	return ordr, nil
 }
 
-//TODO download all orders from BD by uid
+func (repo *OrderRepository) GetAllOrders() ([]model.Order, error) {
+	var orders []model.Order
+
+	uids, err := repo.GetAllOrderUIDs()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, uid := range uids {
+		orderData, err := repo.GetOrderByUID(uid)
+		if err != nil {
+			return nil, err
+		}
+		orders = append(orders, orderData)
+	}
+
+	return orders, nil
+}
+
+func (repo *OrderRepository) GetAllOrderUIDs() ([]string, error) {
+	var orderUIDs []string
+
+	orderUIDQuery := `SELECT order_uid FROM orders`
+
+	rows, err := repo.PgConnPool.Query(context.Background(), orderUIDQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var orderUID string
+		err := rows.Scan(&orderUID)
+		if err != nil {
+			return nil, err
+		}
+		orderUIDs = append(orderUIDs, orderUID)
+	}
+
+	return orderUIDs, nil
+}
