@@ -1,4 +1,4 @@
-package repository
+package posgre
 
 import (
 	"context"
@@ -7,15 +7,15 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-type OrderRepository struct {
+type Repository struct {
 	PgConnPool *pgxpool.Pool
 }
 
-func NewOrderRepository(pgConnPool *pgxpool.Pool) *OrderRepository {
-	return &OrderRepository{PgConnPool: pgConnPool}
+func NewOrderRepository(pgConnPool *pgxpool.Pool) *Repository {
+	return &Repository{PgConnPool: pgConnPool}
 }
 
-func (repo *OrderRepository) InsertOrder(ctx context.Context, newOrder model.Order) error {
+func (repo *Repository) InsertOrder(ctx context.Context, newOrder model.Order) error {
 	query := `
 		INSERT INTO orders (order_uid, track_number, entry, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -37,7 +37,7 @@ func (repo *OrderRepository) InsertOrder(ctx context.Context, newOrder model.Ord
 	return err
 }
 
-func (repo *OrderRepository) InsertDelivery(ctx context.Context, newOrder model.Order) error {
+func (repo *Repository) InsertDelivery(ctx context.Context, newOrder model.Order) error {
 	query := `
 		INSERT INTO delivery (order_uid, name, phone, zip, city, address, region, email )
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -56,7 +56,7 @@ func (repo *OrderRepository) InsertDelivery(ctx context.Context, newOrder model.
 	return err
 }
 
-func (repo *OrderRepository) InsertPayment(ctx context.Context, newOrder model.Order) error {
+func (repo *Repository) InsertPayment(ctx context.Context, newOrder model.Order) error {
 	query := `
 		INSERT INTO payment (transaction, request_id, currency, provider, amount, payment_dt, bank, delivery_cost, goods_total, custom_fee)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -77,7 +77,7 @@ func (repo *OrderRepository) InsertPayment(ctx context.Context, newOrder model.O
 	return err
 }
 
-func (repo *OrderRepository) InsertItem(ctx context.Context, newItem model.Item) error {
+func (repo *Repository) InsertItem(ctx context.Context, newItem model.Item) error {
 	query := `
 		INSERT INTO items (chrt_id, track_number, price, rid, name, sale, size, total_price, nm_id, brand, status)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -99,7 +99,7 @@ func (repo *OrderRepository) InsertItem(ctx context.Context, newItem model.Item)
 	return err
 }
 
-func (repo *OrderRepository) GetOrderByUID(orderUID string) (model.Order, error) {
+func (repo *Repository) GetOrderByUID(orderUID string) (model.Order, error) {
 	var ordr model.Order
 
 	orderQuery := `
@@ -205,7 +205,7 @@ func (repo *OrderRepository) GetOrderByUID(orderUID string) (model.Order, error)
 	return ordr, nil
 }
 
-func (repo *OrderRepository) GetAllOrders() ([]model.Order, error) {
+func (repo *Repository) GetAllOrders() ([]model.Order, error) {
 	var orders []model.Order
 
 	uids, err := repo.GetAllOrderUIDs()
@@ -224,7 +224,7 @@ func (repo *OrderRepository) GetAllOrders() ([]model.Order, error) {
 	return orders, nil
 }
 
-func (repo *OrderRepository) GetAllOrderUIDs() ([]string, error) {
+func (repo *Repository) GetAllOrderUIDs() ([]string, error) {
 	var orderUIDs []string
 
 	orderUIDQuery := `SELECT order_uid FROM orders`

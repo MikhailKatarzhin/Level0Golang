@@ -10,6 +10,7 @@ import (
 	//"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/repository"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/broker/stan"
+	"github.com/MikhailKatarzhin/Level0Golang/pkg/cache"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/logger"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -23,6 +24,7 @@ const (
 	user    = "wbl0user"
 	pass    = "wbl0pass"
 	subject = "testing"
+	nWorker = 10
 )
 
 func main() {
@@ -42,9 +44,11 @@ func main() {
 
 	//TODO pull orders from BD to cache
 
+	lruCache := cache.NewLRUCache[string, []byte](3600)
+
 	jobQueue := make(chan []byte, 100)
 
-	orderService.StartWorkerPool(10, jobQueue, pgConnPool)
+	orderService.StartWorkerPool(nWorker, jobQueue, pgConnPool, lruCache)
 
 	client := stan.New(broker.NATSConfig{
 		Addr:     addr,

@@ -6,13 +6,16 @@ import (
 	"fmt"
 
 	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model"
-	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/repository"
+	cchr "github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/cache"
+	"github.com/MikhailKatarzhin/Level0Golang/internal/orderService/model/posgre"
+	"github.com/MikhailKatarzhin/Level0Golang/pkg/cache"
 	"github.com/MikhailKatarzhin/Level0Golang/pkg/logger"
+
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-func StartWorkerPool(numWorkers int, jobQueue chan []byte, pgConnPool *pgxpool.Pool) {
-	orderServ := NewOrderService(repository.NewOrderRepository(pgConnPool))
+func StartWorkerPool(numWorkers int, jobQueue chan []byte, pgConnPool *pgxpool.Pool, cache *cache.LRUCache[string, []byte]) {
+	orderServ := NewOrderService(posgre.NewOrderRepository(pgConnPool), cchr.NewOrderRepository(cache))
 
 	for i := 0; i < numWorkers; i++ {
 		go work(i, jobQueue, orderServ)
@@ -31,10 +34,22 @@ func work(workerID int, jobQueue chan []byte, orderServ *OrderService) {
 			println(err)
 		}
 
-		logger.L().Info(fmt.Sprintf("[%d]Received STAN order: [uid]%s",
+		logger.L().Info(fmt.Sprintf("[%d]Received STAN order: [uid:%s]",
 			workerID,
 			order.OrderUID,
 		))
+
+		if _, exist := orderServ.CacheRepo.GetOrderByUID(order.OrderUID); exist {
+			if order, err := orderServ.GetOrderByOrderUIDFromBD(order.OrderUID); err != nil {
+				setToCache(order.OrderUID, data, workerID, orderServ)
+			} else {
+				logger.L().Warn(fmt.Sprintf("[%d]Received order[uid:%s] alrady exist",
+					workerID,
+					order.OrderUID,
+				))
+				continue
+			}
+		}
 
 		if err := orderServ.InsertOrderToDB(ctx, order); err != nil {
 			logger.L().Error(fmt.Sprintf(
@@ -48,9 +63,17 @@ func work(workerID int, jobQueue chan []byte, orderServ *OrderService) {
 				workerID,
 				order.OrderUID,
 			))
+			setToCache(order.OrderUID, data, workerID, orderServ)
 		}
-		//TODO insert received and uploaded order into cache
 	}
+}
+
+func setToCache(orderUID string, data []byte, workerID int, orderServ *OrderService) {
+	orderServ.CacheRepo.InsertOrder(orderUID, data)
+	logger.L().Info(fmt.Sprintf("[%d]Successful insert order[uid:%s] to cache",
+		workerID,
+		orderUID,
+	))
 }
 
 func UnmarshalOrder(dataByte []byte) (model.Order, error) {
