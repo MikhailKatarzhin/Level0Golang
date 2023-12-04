@@ -17,8 +17,7 @@ func NewOrderService(orderRepo *repository.OrderRepository) *OrderService {
 	return &OrderService{OrderRepo: orderRepo}
 }
 
-func (osrv *OrderService) InsertOrderToDB(newOrder model.Order) error {
-	ctx := context.Background()
+func (osrv *OrderService) InsertOrderToDB(ctx context.Context, newOrder model.Order) error {
 
 	tx, err := osrv.OrderRepo.PgConnPool.Begin(ctx)
 	if err != nil {
