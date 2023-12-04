@@ -20,10 +20,9 @@ func StartWorkerPool(numWorkers int, jobQueue chan []byte, pgConnPool *pgxpool.P
 }
 
 func work(workerID int, jobQueue chan []byte, orderServ *OrderService) {
-	ctx, cancel := context.WithTimeout(context.Background(), DefaultWorkerCtxTimeout)
-	defer cancel()
-
 	for data := range jobQueue {
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultWorkerCtxTimeout)
+		defer cancel()
 
 		//TODO check received JSON with JSON schema
 

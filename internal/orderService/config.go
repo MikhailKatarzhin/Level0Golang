@@ -3,5 +3,5 @@ package orderService
 import "time"
 
 const (
-	DefaultWorkerCtxTimeout = time.Minute
+	DefaultWorkerCtxTimeout = 2 * time.Second
 )
