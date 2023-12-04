@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+
 	"github.com/MikhailKatarzhin/Level0Golang/internal/order"
+
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -140,3 +142,111 @@ func (repo *OrderRepository) InsertItem(newItem order.Item) error {
 
 	return err
 }
+
+func (repo *OrderRepository) GetOrderByUID(orderUID string) (order.Order, error) {
+	var ordr order.Order
+
+	orderQuery := `
+		SELECT order_uid, track_number, entry, locale, internal_signature, 
+		       customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard 
+		FROM orders 
+		WHERE order_uid = $1
+	`
+	row := repo.pgConnPool.QueryRow(context.Background(), orderQuery, orderUID)
+	err := row.Scan(
+		&ordr.OrderUID,
+		&ordr.TrackNumber,
+		&ordr.Entry,
+		&ordr.Locale,
+		&ordr.InternalSignature,
+		&ordr.CustomerId,
+		&ordr.DeliveryService,
+		&ordr.ShardKey,
+		&ordr.SmId,
+		&ordr.DateCreated,
+		&ordr.OofShard,
+	)
+	if err != nil {
+		return ordr, err
+	}
+
+	deliveryQuery := `
+		SELECT name, phone, zip, city, address, region, email
+		FROM delivery
+		WHERE order_uid = $1
+	`
+	row = repo.pgConnPool.QueryRow(context.Background(), deliveryQuery, orderUID)
+	err = row.Scan(
+
+		&ordr.Delivery.Name,
+		&ordr.Delivery.Phone,
+		&ordr.Delivery.Zip,
+		&ordr.Delivery.City,
+		&ordr.Delivery.Address,
+		&ordr.Delivery.Region,
+		&ordr.Delivery.Email,
+	)
+	if err != nil {
+		return ordr, err
+	}
+
+	paymentQuery := `
+		SELECT transaction, request_id, currency, provider, amount, 
+		       payment_dt, bank, delivery_cost, goods_total, custom_fee
+		FROM payment
+		WHERE transaction = $1
+	`
+	row = repo.pgConnPool.QueryRow(context.Background(), paymentQuery, orderUID)
+	err = row.Scan(
+		&ordr.Payment.Transaction,
+		&ordr.Payment.RequestId,
+		&ordr.Payment.Currency,
+		&ordr.Payment.Provider,
+		&ordr.Payment.Amount,
+		&ordr.Payment.PaymentDt,
+		&ordr.Payment.Bank,
+		&ordr.Payment.DeliveryCost,
+		&ordr.Payment.GoodsTotal,
+		&ordr.Payment.CustomFee,
+	)
+	if err != nil {
+		return ordr, err
+	}
+
+	itemsQuery := `
+		SELECT chrt_id, track_number, price, rid, name, 
+		       sale, size, total_price, nm_id, brand, status
+		FROM items
+		WHERE track_number = $1
+	`
+	rows, err := repo.pgConnPool.Query(context.Background(), itemsQuery, ordr.TrackNumber)
+	if err != nil {
+		return ordr, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item order.Item
+		err := rows.Scan(
+			&item.ChrtId,
+			&item.TrackNumber,
+			&item.Price,
+			&item.Rid,
+			&item.Name,
+			&item.Sale,
+			&item.Size,
+			&item.TotalPrice,
+			&item.NmId,
+			&item.Brand,
+			&item.Status,
+		)
+		if err != nil {
+			return ordr, err
+		}
+		ordr.Items = append(ordr.Items, item)
+	}
+
+	return ordr, nil
+}
+
+//TODO download all orders from BD by uid

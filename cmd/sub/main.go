@@ -40,6 +40,8 @@ func main() {
 	orderRepo := repository.NewOrderRepository(pgConnPool)
 	logger.L().Info("Successfully created repository for postgres")
 
+	//TODO pull orders from BD to cache
+
 	client := stan.New(broker.NATSConfig{
 		Addr:     addr,
 		User:     user,
@@ -80,14 +82,15 @@ func main() {
 					panic(err.Error())
 				}
 
-				receivedOrder, err := UnmarshalTheMessage(data.Body)
+				//TODO check received JSON with JSON schema
+
+				receivedOrder, err := UnmarshalOrder(data.Body)
 				if err != nil {
 					println(err)
 				}
 
 				logger.L().Info(fmt.Sprintf("Received STAN order: [uid]%s", receivedOrder.OrderUID))
 
-				// Inserting order into bd
 				if err := orderRepo.InsertOrderToDB(receivedOrder); err != nil {
 					logger.L().Error(fmt.Sprintf(
 						"Failed to insert order[uid:%s] to DB: %s",
@@ -97,6 +100,19 @@ func main() {
 				} else {
 					logger.L().Info(fmt.Sprintf("Successful insert order[uid:%s] to BD", receivedOrder.OrderUID))
 				}
+
+				orderFromBD, err := orderRepo.GetOrderByUID(receivedOrder.OrderUID)
+				if err != nil {
+					println(err.Error())
+				}
+
+				newJson, err := MarshalOrder(orderFromBD)
+				if err != nil {
+					println(err.Error())
+				}
+
+				println(newJson)
+				//TODO insert received and uploaded order into cache
 			}
 		}
 	}()
@@ -104,14 +120,25 @@ func main() {
 	time.Sleep(30 * time.Minute)
 }
 
-func UnmarshalTheMessage(dataByte []byte) (order.Order, error) {
+func UnmarshalOrder(dataByte []byte) (order.Order, error) {
 	var newOrder order.Order
 	err := json.Unmarshal(dataByte, &newOrder)
 
 	if err != nil {
-		logger.L().Error(fmt.Sprintf("error while unmarshalling message to model : %s", err.Error()))
+		logger.L().Error(fmt.Sprintf("error while unmarshalling message to order : %s", err.Error()))
 		return newOrder, err
 	}
 
 	return newOrder, nil
+}
+
+func MarshalOrder(ordr order.Order) ([]byte, error) {
+	dataByte, err := json.Marshal(ordr)
+
+	if err != nil {
+		logger.L().Error(fmt.Sprintf("error while marshalling order to databyte : %s", err.Error()))
+		return dataByte, err
+	}
+
+	return dataByte, nil
 }
